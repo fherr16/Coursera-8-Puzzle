@@ -1,18 +1,60 @@
 import java.util.Iterator;
 
+import edu.princeton.cs.algs4.StdRandom;
+
 public class Board {
   
   private int[][] board;
   private final int n;
   
   public class BoardIterator implements Iterator<Board> {
+    
+    private int row,col,count;
+    private int[][] boardClone;
+    
+    public BoardIterator() {
+      
+      boardClone = board.clone();
+      
+      findZeroLoop:
+      for (row = 0; row < n; row++)
+        for (col = 0; col < n; col++)
+          if (board[row][col] == 0) break findZeroLoop;
+      
+      count = 4;
+    }
 
     public boolean hasNext() {
-      return false;
+      return count > 0;
     }
 
     public Board next() {
-      return null;
+      if (count == 4) {
+        try {
+          boardClone[row][col] = boardClone[row - 1][col];
+          boardClone[row - 1][col] = 0;
+        } catch (ArrayIndexOutOfBoundsException ex) { count--; }
+      }
+      if (count == 3) {
+        try {
+          boardClone[row][col] = boardClone[row][col + 1];
+          boardClone[row][col + 1] = 0;
+        } catch (ArrayIndexOutOfBoundsException ex) { count--; }
+      }
+      if (count == 2) {
+        try {
+          boardClone[row][col] = boardClone[row + 1][col];
+          boardClone[row + 1][col] = 0;
+        } catch (ArrayIndexOutOfBoundsException ex) { count--; }
+      }
+      if (count == 1) {
+        try {
+          boardClone[row][col] = boardClone[row][col - 1];
+          boardClone[row][col - 1] = 0;
+        } catch (ArrayIndexOutOfBoundsException ex) { count--; }
+      }
+      count--;
+      return new Board(boardClone);
     }
   }
   
@@ -26,8 +68,7 @@ public class Board {
     n = blocks.length;
     board = new int[n][n];
     for (int row = 0; row < n; row++)
-      for (int col = 0; col < n; col++)
-        board[row][col] = blocks[row][col];
+      for (int col = 0; col < n; col++) board[row][col] = blocks[row][col];
   }
   
   public int dimension() {
@@ -69,15 +110,34 @@ public class Board {
   }
   
   public Board twin() {
-    Board twin = new Board(board);
+    int[][] boardClone = board.clone();
     
+    int temp, temp2;
+    int tempRow = StdRandom.uniform(n);
+    int tempCol = StdRandom.uniform(n); 
+    while (boardClone[tempRow][tempCol] == 0) {
+      tempRow = StdRandom.uniform(n);
+      tempCol = StdRandom.uniform(n);
+    }
+    temp = boardClone[tempRow][tempCol];
     
+    int temp2Row = StdRandom.uniform(n);
+    int temp2Col = StdRandom.uniform(n); 
+    while (boardClone[temp2Row][temp2Col] == 0 || boardClone[temp2Row][temp2Col] == temp) {
+      temp2Row = StdRandom.uniform(n);
+      temp2Col = StdRandom.uniform(n);
+    }
+    temp2 = boardClone[temp2Row][temp2Col];
     
+    boardClone[tempRow][tempCol] = temp2;
+    boardClone[temp2Row][temp2Col] = temp;
+    
+    Board twin = new Board(boardClone);
     return twin;
   }
   
-  public boolean equals(Board y) {
-    return false;
+  public boolean equals(Object y) {
+    return toString().equals(y.toString());
   }
   
   public Iterable<Board> neighbors() {
@@ -85,7 +145,14 @@ public class Board {
   }
   
   public String toString() {
-    return "Fix";
+    
+    StringBuffer representation = new StringBuffer();
+    representation.append(n + "\n");
+    for (int row = 0; row < n; row++) {
+      for (int col = 0; col < n; col++)
+        representation.append(board[row][col]);
+      representation.append("\n");
+    }
+    return representation.toString();
   }
-
 }
