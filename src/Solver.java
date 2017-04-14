@@ -1,10 +1,15 @@
 import java.util.Iterator;
+import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.MinPQ;
+import edu.princeton.cs.algs4.StdOut;
 
 public class Solver {
   
   private int moves;
   private MinPQ<SearchNode> pq;
+  SearchNode sn;
+  boolean solvable;
+
   
   private class SearchNode {
     Board board;
@@ -12,43 +17,54 @@ public class Solver {
     SearchNode previous;
   }
   
-  public class SolutionIterator<Board> implements Iterator<Board> {
+  public class SolutionIterator implements Iterator<Board> {
     public boolean hasNext() {
-      return false;
+      return sn != null;
     }
     public Board next() {
-      return null;
+      SearchNode temp = sn;
+      sn = sn.previous;
+      return temp.board;
     }
   }
   
-  public class SolutionIterable<Board> implements Iterable<Board> {
+  public class SolutionIterable implements Iterable<Board> {
     public Iterator<Board> iterator() {
-      return new SolutionIterator<Board>();
-    }
+      return new SolutionIterator();
+    }  
   }
   
   public Solver(Board initial) {
     pq = new MinPQ<SearchNode>();
-    SearchNode sn = new SearchNode();
+    sn = new SearchNode();
     sn.board = initial;
     sn.moves = 0;
     sn.previous = null;
     
-    pq.insert(sn);
-    SearchNode removed = pq.delMin();
-    SearchNode temp;
-    
-    while (!removed.board.isGoal()) {
-      for (Board board : removed.board.neighbors()) {
-        temp = new SearchNode();
-        temp.board = board;
-        temp.moves = removed.moves + 1;
-        temp.previous = removed;
-        
-        pq.insert(temp);
+    if(!isSolvable())
+      solvable = false;
+    else{
+      sn = new SearchNode();
+      pq = new MinPQ<SearchNode>();
+      sn.board = initial;
+      sn.moves = 0;
+      sn.previous = null;
+      pq.insert(sn);
+      sn = pq.delMin();
+      SearchNode temp;
+      
+      while (!sn.board.isGoal()) {
+        for (Board board : sn.board.neighbors()) {
+          temp = new SearchNode();
+          temp.board = board;
+          temp.moves = sn.moves + 1;
+          temp.previous = sn;
+          if (sn.previous != temp)
+            pq.insert(temp);
+        }
+        sn = pq.delMin();
       }
     }
-    
   }
   
   public boolean isSolvable() {
@@ -61,11 +77,27 @@ public class Solver {
   }
   
   public Iterable<Board> solution() {
-    return new SolutionIterable<Board>();
+    return new SolutionIterable();
   }
   
   public static void main(String[] args) {
+    In in = new In(args[0]);
+    int n = in.readInt();
+    int[][] blocks = new int[n][n];
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            blocks[i][j] = in.readInt();
+    Board initial = new Board(blocks);
 
+    Solver solver = new Solver(initial);
+
+    if (!solver.isSolvable())
+        StdOut.println("No solution possible");
+    else {
+        StdOut.println("Minimum number of moves = " + solver.moves());
+        for (Board board : solver.solution())
+            StdOut.println(board);
+    }
   }
   
 }
