@@ -1,4 +1,6 @@
 import java.util.Iterator;
+import java.util.NoSuchElementException;
+
 import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.MinPQ;
 import edu.princeton.cs.algs4.StdOut;
@@ -6,69 +8,135 @@ import edu.princeton.cs.algs4.StdOut;
 public class Solver {
   
   private int moves;
-  private MinPQ<SearchNode> pq;
-  SearchNode sn;
-  boolean solvable;
+  private SearchNode solution, twin, temp;
+  private boolean solvable;
 
-  
-  private class SearchNode {
-    Board board;
-    int moves;
-    SearchNode previous;
+  private class SearchNode implements Comparable<SearchNode> {
+    private Board board;
+    private int moves;
+    private SearchNode previous;
+    
+    public int compareTo(SearchNode other) {
+      if ((this.board.manhattan() + this.moves) > (other.board.manhattan() + other.moves)) return +1;
+      else return -1;
+    }
   }
   
-  public class SolutionIterator implements Iterator<Board> {
+  private class SolutionIterator implements Iterator<Board> {
+    private int count;
+    private SearchNode transverse = new SearchNode();
+    
+    public SolutionIterator() {
+      count = solution.moves;
+    }
+    
     public boolean hasNext() {
-      return sn != null;
+      return count >= 0;
     }
     public Board next() {
-      SearchNode temp = sn;
-      sn = sn.previous;
-      return temp.board;
+      if (solution == null) throw new NoSuchElementException();
+      
+      int counter = 0;
+      transverse.board = solution.board;
+      transverse.moves = solution.moves;
+      transverse.previous = solution.previous;
+      
+      while (counter < count) {
+        transverse = transverse.previous;
+        counter++;
+      }
+      count--;
+      return transverse.board;
     }
   }
   
-  public class SolutionIterable implements Iterable<Board> {
+  private class SolutionIterable implements Iterable<Board> {
     public Iterator<Board> iterator() {
       return new SolutionIterator();
     }  
   }
   
   public Solver(Board initial) {
-    pq = new MinPQ<SearchNode>();
-    sn = new SearchNode();
-    sn.board = initial;
-    sn.moves = 0;
-    sn.previous = null;
     
-    if(!isSolvable())
-      solvable = false;
-    else{
-      sn = new SearchNode();
-      pq = new MinPQ<SearchNode>();
-      sn.board = initial;
-      sn.moves = 0;
-      sn.previous = null;
-      pq.insert(sn);
-      sn = pq.delMin();
-      SearchNode temp;
+    if (initial == null)
+      throw new NullPointerException();
+        
+    if (initial.isGoal()) {
+      solvable = true;
+      moves = 0;
+      solution = new SearchNode();
+      solution.board = initial;
+      solution.moves = 0;
+      solution.previous = null;
+    }
+    else {
+      MinPQ<SearchNode> pqSolution = new MinPQ<SearchNode>();
+      MinPQ<SearchNode> pqTwin = new MinPQ<SearchNode>();
       
-      while (!sn.board.isGoal()) {
-        for (Board board : sn.board.neighbors()) {
-          temp = new SearchNode();
-          temp.board = board;
-          temp.moves = sn.moves + 1;
-          temp.previous = sn;
-          if (sn.previous != temp)
-            pq.insert(temp);
+      boolean initialFlag = false;
+      boolean twinFlag = false;
+
+      solution = new SearchNode();
+      twin = new SearchNode();
+      temp = new SearchNode();
+      
+      solution.board = initial;
+      solution.moves = 0;
+      solution.previous = null;
+      pqSolution.insert(solution);
+      
+      twin.board = initial.twin();
+      twin.moves = 0;
+      twin.previous = null;
+      pqTwin.insert(twin);
+            
+      while (!initialFlag && !twinFlag) {
+        
+        solution = new SearchNode();
+        solution = pqSolution.delMin();
+        twin = new SearchNode();
+        twin = pqTwin.delMin();
+        
+        if (solution.board.isGoal())
+          initialFlag = true;
+        else {
+          for (Board board : solution.board.neighbors()) {
+            if (solution.previous == null || !board.equals(solution.previous.board)) {
+              temp = new SearchNode();
+              temp.board = board;
+              temp.moves = solution.moves+1;
+              temp.previous = solution;
+              pqSolution.insert(temp); 
+            }
+          } 
         }
-        sn = pq.delMin();
+        
+        if (twin.board.isGoal())
+          twinFlag = true;
+        else {
+          for (Board x : twin.board.neighbors()) {
+            if (twin.previous == null || !x.equals(twin.previous.board)) {
+              temp = new SearchNode();
+              temp.board = x;
+              temp.moves = twin.moves+1;
+              temp.previous = twin;
+              pqTwin.insert(temp); 
+            }
+          } 
+        }
+      }
+      
+      if (twinFlag && !initialFlag)
+        solvable = false;
+      else {
+        solvable = true;
+        moves = solution.moves; 
       }
     }
   }
   
   public boolean isSolvable() {
-    return false;
+    return solvable;
   }
   
   public int moves() {
@@ -77,10 +145,15 @@ public class Solver {
   }
   
   public Iterable<Board> solution() {
+    if (!isSolvable())
+      return null;
     return new SolutionIterable();
   }
   
   public static void main(String[] args) {
+
+    // create initial board from file
+//    In in = new In("/Users/fabianherrera/Documents/CourseraTests/8 Puzzle/puzzle25.txt");
     In in = new In(args[0]);
     int n = in.readInt();
     int[][] blocks = new int[n][n];
@@ -89,8 +162,10 @@ public class Solver {
             blocks[i][j] = in.readInt();
     Board initial = new Board(blocks);
 
+    // solve the puzzle
     Solver solver = new Solver(initial);
 
+    // print solution to standard output
     if (!solver.isSolvable())
         StdOut.println("No solution possible");
     else {
@@ -99,5 +174,4 @@ public class Solver {
             StdOut.println(board);
     }
   }
-  
 }
