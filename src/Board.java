@@ -1,5 +1,7 @@
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Vector;
+
 import edu.princeton.cs.algs4.StdRandom;
 
 public class Board {
@@ -78,10 +80,8 @@ public class Board {
   }
   
   public Board(int[][] blocks) {
-    
     if (blocks == null)
       throw new NullPointerException();
-    
     n = blocks.length;
     board = new int[n][n];
     for (int row = 0; row < n; row++)
